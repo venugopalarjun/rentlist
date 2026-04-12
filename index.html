@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>rentlist - Anonymous Rent Mapping</title>
+  <meta name="description" content="Anonymous rent mapping platform for Bangalore. Pin your rent, find flats, discover real rental prices across neighborhoods.">
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <!-- Leaflet -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <!-- MarkerCluster -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
+  <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+
+  <!-- Supabase -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+
+  <!-- App CSS -->
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <!-- Top Bar -->
+  <header id="topbar">
+    <div class="topbar-left">
+      <a href="/" class="logo">
+        <span class="logo-icon">&#127968;</span>
+        <span class="logo-text">rent<span class="logo-accent">list</span></span>
+      </a>
+      <div class="city-selector" id="citySelector">
+        <button class="city-selector-btn" id="citySelectorBtn">
+          <span id="citySelectorLabel">Bangalore</span>
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg>
+        </button>
+        <div class="city-dropdown hidden" id="cityDropdown">
+          <div class="city-option" data-value="bangalore">Bangalore</div>
+          <div class="city-option" data-value="mumbai">Mumbai</div>
+          <div class="city-option" data-value="delhi">Delhi NCR</div>
+          <div class="city-option" data-value="hyderabad">Hyderabad</div>
+          <div class="city-option" data-value="chennai">Chennai</div>
+          <div class="city-option" data-value="pune">Pune</div>
+        </div>
+      </div>
+    </div>
+    <div class="topbar-center">
+      <div class="search-wrapper">
+        <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        <input type="text" id="searchInput" placeholder="Search Koramangala, Indiranagar, HSR..." autocomplete="off">
+        <div id="searchDropdown" class="search-dropdown hidden"></div>
+      </div>
+    </div>
+    <div class="topbar-right">
+      <button id="filterToggleBtn" class="btn btn-ghost">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z"/></svg>
+        <span class="btn-label">Filters</span>
+        <span id="filterBadge" class="badge hidden">0</span>
+      </button>
+      <button id="pinRentBtn" class="btn btn-primary">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+        <span class="btn-label">Pin Your Rent</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Quick Filters Bar -->
+  <div id="quickFilters" class="quick-filters">
+    <div class="quick-filter-group">
+      <button class="qf-chip active" data-qf="postType" data-value="tenant">Tenant</button>
+      <button class="qf-chip active" data-qf="postType" data-value="owner">Owner</button>
+      <button class="qf-chip active" data-qf="postType" data-value="flatmate">Flatmate</button>
+    </div>
+    <div class="qf-divider"></div>
+    <div class="quick-filter-group">
+      <button class="qf-chip" data-qf="bhk" data-value="1rk">1RK</button>
+      <button class="qf-chip" data-qf="bhk" data-value="1">1BHK</button>
+      <button class="qf-chip" data-qf="bhk" data-value="2">2BHK</button>
+      <button class="qf-chip" data-qf="bhk" data-value="3">3BHK</button>
+      <button class="qf-chip" data-qf="bhk" data-value="4">4BHK</button>
+      <button class="qf-chip" data-qf="bhk" data-value="5">5+</button>
+    </div>
+  </div>
+
+  <!-- Map Container -->
+  <div id="map"></div>
+
+  <!-- Floating Controls (right side) -->
+  <div class="floating-controls">
+    <button id="locateMeBtn" class="fab" title="Locate me">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><circle cx="12" cy="12" r="3"/><path d="M12 2v3m0 14v3M2 12h3m14 0h3"/><circle cx="12" cy="12" r="8"/></svg>
+    </button>
+    <button id="flatHuntBtn" class="fab" title="Flat Hunt">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+    </button>
+    <button id="shareWhatsAppBtn" class="fab fab-whatsapp" title="Share on WhatsApp">
+      <svg viewBox="0 0 24 24" fill="currentColor" width="22" height="22"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+    </button>
+  </div>
+
+  <!-- Pin Count -->
+  <div id="pinCount" class="pin-count">
+    <span id="pinCountNumber">0</span> rents pinned
+  </div>
+
+  <!-- Legend -->
+  <div class="legend">
+    <div class="legend-item"><span class="legend-dot" style="background:#0F766E"></span>Gated</div>
+    <div class="legend-item"><span class="legend-dot" style="background:#D97706"></span>Independent</div>
+    <div class="legend-item"><span class="legend-dot" style="background:#059669"></span>Vacant Soon</div>
+    <div class="legend-item"><span class="legend-dot" style="background:#7C3AED"></span>Flatmate Seeking</div>
+  </div>
+
+  <!-- Filter Panel -->
+  <div id="filterPanel" class="filter-panel hidden">
+    <div class="panel-header">
+      <h3>Filters</h3>
+      <button id="clearFilters" class="btn btn-ghost btn-sm">Clear all</button>
+      <button id="closeFilters" class="panel-close">&times;</button>
+    </div>
+    <div class="panel-body">
+      <!-- BHK -->
+      <div class="filter-group">
+        <label class="filter-label">BHK</label>
+        <div class="checkbox-group" id="panelBhk">
+          <label class="chip-check"><input type="checkbox" name="bhk" value="1rk"><span>1RK</span></label>
+          <label class="chip-check"><input type="checkbox" name="bhk" value="1"><span>1 BHK</span></label>
+          <label class="chip-check"><input type="checkbox" name="bhk" value="2"><span>2 BHK</span></label>
+          <label class="chip-check"><input type="checkbox" name="bhk" value="3"><span>3 BHK</span></label>
+          <label class="chip-check"><input type="checkbox" name="bhk" value="4"><span>4 BHK</span></label>
+          <label class="chip-check"><input type="checkbox" name="bhk" value="5"><span>5+</span></label>
+        </div>
+      </div>
+      <!-- Price Range -->
+      <div class="filter-group">
+        <label class="filter-label">Price Range</label>
+        <div class="range-display">
+          <span id="priceMinLabel">&#8377;5,000</span>
+          <span id="priceMaxLabel">&#8377;1,00,000</span>
+        </div>
+        <div class="dual-range">
+          <input type="range" id="priceMin" min="5000" max="100000" value="5000" step="1000">
+          <input type="range" id="priceMax" min="5000" max="100000" value="100000" step="1000">
+        </div>
+      </div>
+      <!-- Furnishing -->
+      <div class="filter-group">
+        <label class="filter-label">Furnishing</label>
+        <div class="checkbox-group">
+          <label class="chip-check"><input type="checkbox" name="furnishing" value="unfurnished"><span>Unfurnished</span></label>
+          <label class="chip-check"><input type="checkbox" name="furnishing" value="semi"><span>Semi</span></label>
+          <label class="chip-check"><input type="checkbox" name="furnishing" value="fully"><span>Fully</span></label>
+        </div>
+      </div>
+      <!-- Society Type -->
+      <div class="filter-group">
+        <label class="filter-label">Society Type</label>
+        <div class="checkbox-group">
+          <label class="chip-check"><input type="checkbox" name="society" value="gated"><span>Gated</span></label>
+          <label class="chip-check"><input type="checkbox" name="society" value="independent"><span>Independent</span></label>
+        </div>
+      </div>
+      <!-- Vacancy -->
+      <div class="filter-group">
+        <label class="filter-label">Availability</label>
+        <div class="checkbox-group">
+          <label class="chip-check"><input type="checkbox" name="vacancy" value="now" checked><span>Now</span></label>
+          <label class="chip-check"><input type="checkbox" name="vacancy" value="soon" checked><span>Soon</span></label>
+        </div>
+      </div>
+      <!-- Post Type -->
+      <div class="filter-group">
+        <label class="filter-label">Post Type</label>
+        <div class="checkbox-group" id="panelPostType">
+          <label class="chip-check"><input type="checkbox" name="postType" value="tenant" checked><span>Tenant</span></label>
+          <label class="chip-check"><input type="checkbox" name="postType" value="owner" checked><span>Owner</span></label>
+          <label class="chip-check"><input type="checkbox" name="postType" value="flatmate" checked><span>Flatmate</span></label>
+        </div>
+      </div>
+    </div>
+    <div class="panel-footer">
+      <button id="applyFilters" class="btn btn-primary btn-block">Apply Filters</button>
+    </div>
+  </div>
+
+  <!-- Pin Submission Modal -->
+  <div id="pinModal" class="modal-overlay hidden">
+    <div class="modal">
+      <div class="modal-header">
+        <h2>Pin Your Rent</h2>
+        <button class="modal-close" data-close="pinModal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <!-- Post Type Toggle -->
+        <div class="form-group">
+          <label class="form-label">I am a...</label>
+          <div class="toggle-group" id="postTypeToggle">
+            <button class="toggle-btn active" data-value="tenant">Tenant</button>
+            <button class="toggle-btn" data-value="owner">Owner / Landlord</button>
+            <button class="toggle-btn" data-value="flatmate">Looking for Flatmate</button>
+          </div>
+        </div>
+
+        <!-- BHK -->
+        <div class="form-group">
+          <label class="form-label">BHK <span class="required">*</span></label>
+          <div class="toggle-group" id="bhkSelector">
+            <button class="toggle-btn" data-value="1rk">1RK</button>
+            <button class="toggle-btn active" data-value="1">1</button>
+            <button class="toggle-btn" data-value="2">2</button>
+            <button class="toggle-btn" data-value="3">3</button>
+            <button class="toggle-btn" data-value="4">4</button>
+            <button class="toggle-btn" data-value="5">5+</button>
+          </div>
+        </div>
+
+        <!-- Rent -->
+        <div class="form-group">
+          <label class="form-label">Monthly Rent <span class="required">*</span></label>
+          <div class="input-prefix">
+            <span class="prefix">&#8377;</span>
+            <input type="text" id="rentInput" placeholder="25,000" inputmode="numeric">
+          </div>
+        </div>
+
+        <!-- Deposit (months of rent) -->
+        <div class="form-group">
+          <label class="form-label">Deposit (months of rent)</label>
+          <div class="toggle-group toggle-group-wrap" id="depositSelector">
+            <button class="toggle-btn toggle-btn-sm" data-value="1">1</button>
+            <button class="toggle-btn toggle-btn-sm" data-value="2">2</button>
+            <button class="toggle-btn toggle-btn-sm active" data-value="3">3</button>
+            <button class="toggle-btn toggle-btn-sm" data-value="4">4</button>
+            <button class="toggle-btn toggle-btn-sm" data-value="5">5</button>
+            <button class="toggle-btn toggle-btn-sm" data-value="6">6</button>
+            <button class="toggle-btn toggle-btn-sm" data-value="7">7</button>
+            <button class="toggle-btn toggle-btn-sm" data-value="8">8</button>
+            <button class="toggle-btn toggle-btn-sm" data-value="9">9</button>
+            <button class="toggle-btn toggle-btn-sm" data-value="10">10</button>
+          </div>
+          <span id="depositPreview" class="form-hint" style="color:#0F766E;"></span>
+        </div>
+
+        <!-- Furnishing -->
+        <div class="form-group">
+          <label class="form-label">Furnishing</label>
+          <div class="toggle-group" id="furnishingToggle">
+            <button class="toggle-btn" data-value="unfurnished">Unfurnished</button>
+            <button class="toggle-btn active" data-value="semi">Semi</button>
+            <button class="toggle-btn" data-value="fully">Fully</button>
+          </div>
+        </div>
+
+        <!-- Society Type -->
+        <div class="form-group">
+          <label class="form-label">Society Type</label>
+          <div class="toggle-group" id="societyToggle">
+            <button class="toggle-btn active" data-value="gated">Gated</button>
+            <button class="toggle-btn" data-value="independent">Independent</button>
+          </div>
+        </div>
+
+        <!-- Owner-specific fields -->
+        <div id="ownerFields" class="hidden">
+          <!-- Availability -->
+          <div class="form-group">
+            <label class="form-label">Availability</label>
+            <div class="toggle-group" id="availabilityToggle">
+              <button class="toggle-btn active" data-value="now">Available Now</button>
+              <button class="toggle-btn" data-value="date">Pick a Date</button>
+            </div>
+            <input type="date" id="availableFrom" class="form-input hidden" style="margin-top:8px;">
+          </div>
+
+          <!-- Floor -->
+          <div class="form-row">
+            <div class="form-group half">
+              <label class="form-label">Floor</label>
+              <input type="number" id="floorInput" class="form-input" placeholder="e.g. 3" min="0" max="50">
+            </div>
+            <div class="form-group half">
+              <label class="form-label">Area (sq ft)</label>
+              <input type="number" id="areaInput" class="form-input" placeholder="e.g. 1200" min="100">
+            </div>
+          </div>
+
+          <!-- Pets -->
+          <div class="form-group">
+            <label class="form-label">Pets Allowed</label>
+            <div class="toggle-group" id="petsToggle">
+              <button class="toggle-btn" data-value="yes">Yes</button>
+              <button class="toggle-btn active" data-value="no">No</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Flatmate-specific fields -->
+        <div id="flatmateFields" class="hidden">
+          <hr class="divider">
+          <h3 class="section-title">Flatmate Preferences</h3>
+
+          <div class="form-group">
+            <label class="form-label">Budget per person</label>
+            <div class="input-prefix">
+              <span class="prefix">&#8377;</span>
+              <input type="text" id="budgetPerPerson" placeholder="10,000" inputmode="numeric">
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group half">
+              <label class="form-label">Current Occupants</label>
+              <input type="number" id="currentOccupants" class="form-input" placeholder="2" min="0" max="10">
+            </div>
+            <div class="form-group half">
+              <label class="form-label">Gender Pref</label>
+              <select id="genderPref" class="form-input">
+                <option value="any">Any</option>
+                <option value="male">Male</option>
+                <option value="female">Female</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group half">
+              <label class="form-label">Food</label>
+              <select id="foodPref" class="form-input">
+                <option value="any">Any</option>
+                <option value="veg">Veg</option>
+                <option value="nonveg">Non-veg</option>
+              </select>
+            </div>
+            <div class="form-group half">
+              <label class="form-label">Smoking</label>
+              <select id="smokingPref" class="form-input">
+                <option value="no">Not Allowed</option>
+                <option value="yes">Allowed</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Move-in Timeline</label>
+            <div class="toggle-group" id="moveInToggle">
+              <button class="toggle-btn active" data-value="immediately">Immediately</button>
+              <button class="toggle-btn" data-value="1month">Within 1 mo</button>
+              <button class="toggle-btn" data-value="3months">Within 3 mo</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Owner/Flatmate extra fields -->
+        <div id="extraFields" class="hidden">
+          <!-- Notes -->
+          <div class="form-group">
+            <label class="form-label">Notes</label>
+            <textarea id="notesInput" class="form-input" rows="3" placeholder="Any additional details..."></textarea>
+          </div>
+
+          <!-- Contact -->
+          <div class="form-group">
+            <label class="form-label">Phone Number <span class="required">*</span></label>
+            <input type="tel" id="contactInput" class="form-input" placeholder="e.g. 9876543210" inputmode="tel">
+            <span class="form-hint">Displayed publicly so interested people can contact you directly. Pin auto-expires in 15 days.</span>
+          </div>
+        </div>
+
+        <!-- Coordinates (hidden) -->
+        <input type="hidden" id="pinLat">
+        <input type="hidden" id="pinLng">
+      </div>
+      <div class="modal-footer">
+        <button id="submitPin" class="btn btn-primary btn-block">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+          Drop Pin
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Flat Hunt Modal -->
+  <div id="flatHuntModal" class="modal-overlay hidden">
+    <div class="modal modal-sm">
+      <div class="modal-header">
+        <h2>Flat Hunt</h2>
+        <button class="modal-close" data-close="flatHuntModal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p class="modal-desc">What are you looking for?</p>
+        <div class="hunt-options">
+          <button id="huntTenant" class="hunt-card">
+            <div class="hunt-icon" style="background:rgba(15,118,110,0.08);color:#0F766E">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="32" height="32"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+            </div>
+            <h4>Pin Your Rent</h4>
+            <p>Share what you're paying so others can see real rents</p>
+          </button>
+          <button id="huntOwner" class="hunt-card">
+            <div class="hunt-icon" style="background:rgba(217,119,6,0.08);color:#D97706">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="32" height="32"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+            </div>
+            <h4>List Your Property</h4>
+            <p>Pin your flat on the map as an owner or landlord</p>
+          </button>
+          <button id="huntFlatmate" class="hunt-card">
+            <div class="hunt-icon" style="background:rgba(124,58,237,0.08);color:#7C3AED">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="32" height="32"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            </div>
+            <h4>Find a Flatmate</h4>
+            <p>Post your room and connect with potential flatmates</p>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Welcome Modal -->
+  <div id="welcomeModal" class="modal-overlay hidden">
+    <div class="modal modal-sm">
+      <div class="modal-header">
+        <h2>Welcome to rentlist</h2>
+        <button class="modal-close" data-close="welcomeModal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p class="modal-desc">An anonymous rent-mapping platform. See what people actually pay, and share your own rent.</p>
+        <div class="welcome-features">
+          <div class="welcome-feature">
+            <span class="legend-dot" style="background:#0F766E"></span>
+            <span><strong>Teal pins</strong> - Gated society rentals</span>
+          </div>
+          <div class="welcome-feature">
+            <span class="legend-dot" style="background:#D97706"></span>
+            <span><strong>Amber pins</strong> - Independent house/apartment</span>
+          </div>
+          <div class="welcome-feature">
+            <span class="legend-dot" style="background:#059669"></span>
+            <span><strong>Green pins</strong> - Available soon</span>
+          </div>
+          <div class="welcome-feature">
+            <span class="legend-dot" style="background:#7C3AED"></span>
+            <span><strong>Purple pins</strong> - Looking for flatmate</span>
+          </div>
+        </div>
+        <p class="modal-hint">Click anywhere on the map to drop a pin, or use the "Pin Your Rent" button.</p>
+      </div>
+      <div class="modal-footer">
+        <button id="welcomeClose" class="btn btn-primary btn-block">Got it, let's go!</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Container -->
+  <div id="toastContainer" class="toast-container"></div>
+
+  <!-- Scripts -->
+  <script src="js/cities.js"></script>
+  <script src="js/data.js"></script>
+  <script src="js/map.js"></script>
+  <script src="js/filters.js"></script>
+  <script src="js/modals.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
