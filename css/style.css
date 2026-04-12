@@ -1462,7 +1462,7 @@ textarea.form-input { resize: vertical; min-height: 60px; }
 
 @media (max-width: 480px) {
   .topbar-right .btn-ghost {
-    display: none;
+    padding: 6px 8px;
   }
 
   .legend {
