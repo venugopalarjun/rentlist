@@ -4,8 +4,8 @@
 
 const DataStore = (() => {
   // ---- Supabase Config (replace with your credentials) ----
-  const SUPABASE_URL = 'https://YOUR_PROJECT.supabase.co';
-  const SUPABASE_KEY = 'YOUR_ANON_KEY';
+  const SUPABASE_URL = 'https://chsbrilpfqyqyeoyghcd.supabase.co';
+  const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoc2JyaWxwZnF5cXllb3lnaGNkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU5MDAyMTcsImV4cCI6MjA5MTQ3NjIxN30.d_Kt5z7NG79G36W44xRdWejpF1phSaiZ63CTDzoz47o';
   const TABLE = 'pins';
 
   let supabase = null;
@@ -202,7 +202,7 @@ const DataStore = (() => {
   function init() {
     // Try to init Supabase (CDN exposes window.supabase.createClient)
     if (typeof window !== 'undefined' &&
-        SUPABASE_URL !== 'https://YOUR_PROJECT.supabase.co') {
+        SUPABASE_URL && !SUPABASE_URL.includes('YOUR_PROJECT')) {
       try {
         const createClient = window.supabase?.createClient;
         if (createClient) {

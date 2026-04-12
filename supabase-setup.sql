@@ -26,6 +26,7 @@ create table pins (
   "foodPref" text,
   "smokingPref" text,
   "moveInTimeline" text,
+  city text default 'bangalore',
   "createdAt" timestamptz default now(),
   reports integer default 0
 );
@@ -61,6 +62,7 @@ create policy "Anyone can delete pins"
 create index idx_pins_posttype on pins ("postType");
 create index idx_pins_created on pins ("createdAt");
 create index idx_pins_location on pins (lat, lng);
+create index idx_pins_city on pins (city);
 
 -- 7. Enable realtime (so new pins appear for everyone instantly)
 alter publication supabase_realtime add table pins;
