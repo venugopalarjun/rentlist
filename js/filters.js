@@ -24,6 +24,15 @@ const Filters = (() => {
     'basav': 'Basavanagudi', 'bgr': 'Bannerghatta Road',
     'srp': 'Sarjapur Road', 'sarj': 'Sarjapur Road',
     'bell': 'Bellandur', 'dom': 'Domlur',
+    'brook': 'Brookefield', 'aecs': 'AECS Layout',
+    'itpl': 'ITPL', 'hoodi': 'Hoodi',
+    'hbr': 'HBR Layout', 'kalyan': 'Kalyan Nagar',
+    'kamm': 'Kammanahalli', 'manyata': 'Manyata Tech Park',
+    'rr': 'RR Nagar', 'rrn': 'RR Nagar',
+    'haralur': 'Haralur Road', 'kudlu': 'Kudlu Gate',
+    'richmond': 'Richmond Town', 'ulsoor': 'Ulsoor',
+    'wilson': 'Wilson Garden', 'cv raman': 'CV Raman Nagar',
+    'banaswadi': 'Banaswadi', 'bomm': 'Bommanahalli',
     // Mumbai
     'bkc': 'BKC', 'bandra': 'Bandra West',
     'andheri': 'Andheri West', 'powai': 'Powai',
@@ -188,9 +197,10 @@ const Filters = (() => {
   }
 
   function highlightMatch(text, query) {
-    const idx = text.toLowerCase().indexOf(query);
-    if (idx === -1) return text;
-    return text.slice(0, idx) + '<strong>' + text.slice(idx, idx + query.length) + '</strong>' + text.slice(idx + query.length);
+    if (!query) return `<span class="search-name">${text}</span>`;
+    const idx = text.toLowerCase().indexOf(query.toLowerCase());
+    if (idx === -1) return `<span class="search-name">${text}</span>`;
+    return `<span class="search-name">${text.slice(0, idx)}<strong>${text.slice(idx, idx + query.length)}</strong>${text.slice(idx + query.length)}</span>`;
   }
 
   // ---- Quick Filter Bar (synced with panel) ----

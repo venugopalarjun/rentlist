@@ -266,9 +266,15 @@ html, body {
 }
 
 .search-item {
-  display: flex;
+  display: flex !important;
   align-items: center;
   justify-content: space-between;
+  gap: 8px;
+}
+
+.search-name {
+  flex: 1;
+  min-width: 0;
 }
 
 .search-count {
