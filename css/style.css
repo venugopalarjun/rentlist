@@ -265,6 +265,29 @@ html, body {
   margin-left: 6px;
 }
 
+.search-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.search-count {
+  font-size: 11px;
+  color: var(--teal);
+  background: var(--teal-bg);
+  padding: 2px 7px;
+  border-radius: 10px;
+  white-space: nowrap;
+  margin-left: 8px;
+}
+
+.search-empty {
+  padding: 12px 14px;
+  color: var(--text-muted);
+  font-size: 13px;
+  text-align: center;
+}
+
 /* ----- Buttons ----- */
 .btn {
   display: inline-flex;

@@ -6,6 +6,84 @@ const Filters = (() => {
   let currentFilters = {};
   let allPins = [];
 
+  // ---- Search: aliases for common abbreviations ----
+  const ALIASES = {
+    // Bangalore
+    'ec': 'Electronic City', 'ecity': 'Electronic City',
+    'btm': 'BTM Layout', 'hsr': 'HSR Layout',
+    'jp': 'JP Nagar', 'jpn': 'JP Nagar',
+    'kr': 'KR Puram', 'mg': 'MG Road',
+    'hal': 'HAL', 'rt': 'RT Nagar',
+    'bsk': 'Banashankari', 'bnk': 'Banashankari',
+    'indira': 'Indiranagar', 'indo': 'Indiranagar',
+    'kora': 'Koramangala', 'krm': 'Koramangala',
+    'mara': 'Marathahalli', 'mrh': 'Marathahalli',
+    'wf': 'Whitefield', 'ypr': 'Yeshwanthpur',
+    'malli': 'Malleshwaram', 'mlr': 'Malleshwaram',
+    'jaya': 'Jayanagar', 'jnr': 'Jayanagar',
+    'basav': 'Basavanagudi', 'bgr': 'Bannerghatta Road',
+    'srp': 'Sarjapur Road', 'sarj': 'Sarjapur Road',
+    'bell': 'Bellandur', 'dom': 'Domlur',
+    // Mumbai
+    'bkc': 'BKC', 'bandra': 'Bandra West',
+    'andheri': 'Andheri West', 'powai': 'Powai',
+    'lower parel': 'Lower Parel', 'lp': 'Lower Parel',
+    'worli': 'Worli', 'dadar': 'Dadar',
+    'goregaon': 'Goregaon East', 'malad': 'Malad West',
+    'juhu': 'Juhu', 'versova': 'Versova',
+    // Delhi
+    'cr park': 'CR Park', 'crp': 'CR Park',
+    'gk': 'Greater Kailash', 'hkv': 'Hauz Khas Village',
+    'hk': 'Hauz Khas Village', 'cp': 'Connaught Place',
+    'dwarka': 'Dwarka', 'noida': 'Noida Sector 62',
+    'rk': 'RK Puram', 'vasant': 'Vasant Kunj',
+    'saket': 'Saket', 'lajpat': 'Lajpat Nagar',
+    // Hyderabad
+    'hitec': 'HITEC City', 'hitech': 'HITEC City',
+    'gachi': 'Gachibowli', 'madh': 'Madhapur',
+    'kondapur': 'Kondapur', 'jubilee': 'Jubilee Hills',
+    'banjara': 'Banjara Hills', 'ameerpet': 'Ameerpet',
+    // Chennai
+    'omr': 'OMR (IT Corridor)', 'ecr': 'ECR',
+    'tnagar': 'T. Nagar', 'adyar': 'Adyar',
+    'anna nagar': 'Anna Nagar', 'velachery': 'Velachery',
+    'tambaram': 'Tambaram', 'porur': 'Porur',
+    // Pune
+    'kp': 'Koregaon Park', 'krp': 'Koregaon Park',
+    'hinjewadi': 'Hinjewadi', 'viman': 'Viman Nagar',
+    'sb': 'SB Road', 'fc': 'FC Road',
+    'kothrud': 'Kothrud', 'baner': 'Baner',
+    'wakad': 'Wakad', 'hadapsar': 'Hadapsar',
+  };
+
+  // Count pins near a neighborhood
+  function countPinsNear(hood, pins) {
+    if (!pins || pins.length === 0) return 0;
+    const RADIUS = 0.012; // ~1.3 km
+    return pins.filter(p =>
+      Math.abs(p.lat - hood.lat) < RADIUS && Math.abs(p.lng - hood.lng) < RADIUS
+    ).length;
+  }
+
+  // Fuzzy match: handles typos by checking if all chars appear in order
+  function fuzzyMatch(text, query) {
+    const t = text.toLowerCase();
+    const q = query.toLowerCase();
+    // First try direct includes (best match)
+    if (t.includes(q)) return 2;
+    // Then try word-start matching (e.g. "kor" matches "Koramangala")
+    const words = t.split(/\s+/);
+    if (words.some(w => w.startsWith(q))) return 1.5;
+    // Then try fuzzy: all chars in order
+    let ti = 0;
+    for (let qi = 0; qi < q.length; qi++) {
+      while (ti < t.length && t[ti] !== q[qi]) ti++;
+      if (ti >= t.length) return 0;
+      ti++;
+    }
+    return 1;
+  }
+
   // ---- Search Autocomplete ----
   function initSearch() {
     const input = document.getElementById('searchInput');
@@ -19,28 +97,48 @@ const Filters = (() => {
         return;
       }
       const neighborhoods = DataStore.getNeighborhoods();
-      const matches = neighborhoods.filter(n =>
-        n.name.toLowerCase().includes(val)
-      ).slice(0, 10);
 
-      if (matches.length === 0) {
-        dropdown.classList.add('hidden');
+      // Check alias first
+      const aliasTarget = ALIASES[val];
+
+      // Score each neighborhood
+      let scored = neighborhoods.map(n => {
+        let score = 0;
+        // Alias match = top priority
+        if (aliasTarget && n.name.toLowerCase() === aliasTarget.toLowerCase()) {
+          score = 10;
+        } else {
+          score = fuzzyMatch(n.name, val);
+        }
+        return { ...n, score };
+      }).filter(n => n.score > 0);
+
+      // Sort by score (highest first), then alphabetically
+      scored.sort((a, b) => b.score - a.score || a.name.localeCompare(b.name));
+      scored = scored.slice(0, 10);
+
+      if (scored.length === 0) {
+        dropdown.innerHTML = '<div class="search-empty">No neighborhoods found</div>';
+        dropdown.classList.remove('hidden');
         return;
       }
 
-      dropdown.innerHTML = matches.map((n, i) =>
-        `<div class="search-item" data-idx="${i}" data-lat="${n.lat}" data-lng="${n.lng}">${highlightMatch(n.name, val)}<span class="area-label">${(DataStore.getCityData() || {}).name || ''}</span></div>`
-      ).join('');
+      dropdown.innerHTML = scored.map((n, i) => {
+        const pinCount = countPinsNear(n, allPins);
+        const countLabel = pinCount > 0 ? `<span class="search-count">${pinCount} pin${pinCount !== 1 ? 's' : ''}</span>` : '';
+        return `<div class="search-item" data-idx="${i}" data-lat="${n.lat}" data-lng="${n.lng}" data-name="${n.name}">${highlightMatch(n.name, aliasTarget ? '' : val)}${countLabel}</div>`;
+      }).join('');
       dropdown.classList.remove('hidden');
 
       dropdown.querySelectorAll('.search-item').forEach(item => {
         item.addEventListener('click', () => {
           const lat = parseFloat(item.dataset.lat);
           const lng = parseFloat(item.dataset.lng);
-          input.value = item.textContent.replace((DataStore.getCityData() || {}).name || '', '').trim();
+          const name = item.dataset.name;
+          input.value = name;
           dropdown.classList.add('hidden');
           MapManager.flyTo(lat, lng, 15);
-          Toast.show(`Showing ${input.value}`, 'info');
+          Toast.show(`Showing ${name}`, 'info');
         });
       });
     });
