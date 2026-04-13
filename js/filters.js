@@ -37,36 +37,66 @@ const Filters = (() => {
     return clean;
   }
 
-  async function geocodeSearch(query) {
+  async function nominatimFetch(query, signal, bounded) {
     const city = DataStore.getCityData();
     const cityName = city ? city.name : '';
     const bounds = getCityBounds();
 
-    // Build Nominatim URL
-    let url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query + ' ' + cityName)}&limit=8&addressdetails=1`;
+    let url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=8&addressdetails=1&countrycodes=in`;
     if (bounds) {
-      url += `&viewbox=${bounds.join(',')}&bounded=1`;
+      url += `&viewbox=${bounds.join(',')}`;
+      if (bounded) url += `&bounded=1`;
     }
+
+    const res = await fetch(url, {
+      signal,
+      headers: { 'Accept-Language': 'en' },
+    });
+    if (!res.ok) return [];
+    const data = await res.json();
+    return data.map(r => ({
+      name: r.display_name.split(',')[0].trim(),
+      fullName: cleanDisplayName(r.display_name, cityName),
+      lat: parseFloat(r.lat),
+      lng: parseFloat(r.lon),
+    }));
+  }
+
+  async function geocodeSearch(query) {
+    const city = DataStore.getCityData();
+    const cityName = city ? city.name : '';
 
     // Abort previous request
     if (abortController) abortController.abort();
     abortController = new AbortController();
+    const signal = abortController.signal;
 
     try {
-      const res = await fetch(url, {
-        signal: abortController.signal,
-        headers: { 'Accept-Language': 'en' },
+      // 1) Try bounded search with city name appended for context
+      let results = await nominatimFetch(query + ', ' + cityName, signal, true);
+
+      // 2) If no results, try bounded without city name (handles exact place names)
+      if (results.length === 0) {
+        results = await nominatimFetch(query, signal, true);
+      }
+
+      // 3) If still nothing, try unbounded India-wide search with city name
+      if (results.length === 0) {
+        results = await nominatimFetch(query + ', ' + cityName, signal, false);
+      }
+
+      // Deduplicate by name (keep first occurrence which is usually most relevant)
+      const seen = new Set();
+      results = results.filter(r => {
+        const key = r.name.toLowerCase();
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
       });
-      if (!res.ok) return [];
-      const data = await res.json();
-      return data.map(r => ({
-        name: r.display_name.split(',')[0].trim(),
-        fullName: cleanDisplayName(r.display_name, cityName),
-        lat: parseFloat(r.lat),
-        lng: parseFloat(r.lon),
-      }));
+
+      return results;
     } catch (e) {
-      if (e.name === 'AbortError') return null; // Aborted, ignore
+      if (e.name === 'AbortError') return null;
       console.warn('[Search] Geocode error:', e);
       return [];
     }
