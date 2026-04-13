@@ -6,91 +6,98 @@ const Filters = (() => {
   let currentFilters = {};
   let allPins = [];
 
-  // ---- Search: aliases for common abbreviations ----
-  const ALIASES = {
-    // Bangalore
-    'ec': 'Electronic City', 'ecity': 'Electronic City',
-    'btm': 'BTM Layout', 'hsr': 'HSR Layout',
-    'jp': 'JP Nagar', 'jpn': 'JP Nagar',
-    'kr': 'KR Puram', 'mg': 'MG Road',
-    'hal': 'HAL', 'rt': 'RT Nagar',
-    'bsk': 'Banashankari', 'bnk': 'Banashankari',
-    'indira': 'Indiranagar', 'indo': 'Indiranagar',
-    'kora': 'Koramangala', 'krm': 'Koramangala',
-    'mara': 'Marathahalli', 'mrh': 'Marathahalli',
-    'wf': 'Whitefield', 'ypr': 'Yeshwanthpur',
-    'malli': 'Malleshwaram', 'mlr': 'Malleshwaram',
-    'jaya': 'Jayanagar', 'jnr': 'Jayanagar',
-    'basav': 'Basavanagudi', 'bgr': 'Bannerghatta Road',
-    'srp': 'Sarjapur Road', 'sarj': 'Sarjapur Road',
-    'bell': 'Bellandur', 'dom': 'Domlur',
-    'brook': 'Brookefield', 'aecs': 'AECS Layout',
-    'itpl': 'ITPL', 'hoodi': 'Hoodi',
-    'hbr': 'HBR Layout', 'kalyan': 'Kalyan Nagar',
-    'kamm': 'Kammanahalli', 'manyata': 'Manyata Tech Park',
-    'rr': 'RR Nagar', 'rrn': 'RR Nagar',
-    'haralur': 'Haralur Road', 'kudlu': 'Kudlu Gate',
-    'richmond': 'Richmond Town', 'ulsoor': 'Ulsoor',
-    'wilson': 'Wilson Garden', 'cv raman': 'CV Raman Nagar',
-    'banaswadi': 'Banaswadi', 'bomm': 'Bommanahalli',
-    // Mumbai
-    'bkc': 'BKC', 'bandra': 'Bandra West',
-    'andheri': 'Andheri West', 'powai': 'Powai',
-    'lower parel': 'Lower Parel', 'lp': 'Lower Parel',
-    'worli': 'Worli', 'dadar': 'Dadar',
-    'goregaon': 'Goregaon East', 'malad': 'Malad West',
-    'juhu': 'Juhu', 'versova': 'Versova',
-    // Delhi
-    'cr park': 'CR Park', 'crp': 'CR Park',
-    'gk': 'Greater Kailash', 'hkv': 'Hauz Khas Village',
-    'hk': 'Hauz Khas Village', 'cp': 'Connaught Place',
-    'dwarka': 'Dwarka', 'noida': 'Noida Sector 62',
-    'rk': 'RK Puram', 'vasant': 'Vasant Kunj',
-    'saket': 'Saket', 'lajpat': 'Lajpat Nagar',
-    // Hyderabad
-    'hitec': 'HITEC City', 'hitech': 'HITEC City',
-    'gachi': 'Gachibowli', 'madh': 'Madhapur',
-    'kondapur': 'Kondapur', 'jubilee': 'Jubilee Hills',
-    'banjara': 'Banjara Hills', 'ameerpet': 'Ameerpet',
-    // Chennai
-    'omr': 'OMR (IT Corridor)', 'ecr': 'ECR',
-    'tnagar': 'T. Nagar', 'adyar': 'Adyar',
-    'anna nagar': 'Anna Nagar', 'velachery': 'Velachery',
-    'tambaram': 'Tambaram', 'porur': 'Porur',
-    // Pune
-    'kp': 'Koregaon Park', 'krp': 'Koregaon Park',
-    'hinjewadi': 'Hinjewadi', 'viman': 'Viman Nagar',
-    'sb': 'SB Road', 'fc': 'FC Road',
-    'kothrud': 'Kothrud', 'baner': 'Baner',
-    'wakad': 'Wakad', 'hadapsar': 'Hadapsar',
-  };
+  // ---- Search: Geocoding via Nominatim + pin count ----
+  let searchTimeout = null;
+  let abortController = null;
 
-  // Count pins near a neighborhood
-  function countPinsNear(hood, pins) {
+  // Count pins near a location
+  function countPinsNear(lat, lng, pins) {
     if (!pins || pins.length === 0) return 0;
     const RADIUS = 0.012; // ~1.3 km
     return pins.filter(p =>
-      Math.abs(p.lat - hood.lat) < RADIUS && Math.abs(p.lng - hood.lng) < RADIUS
+      Math.abs(p.lat - lat) < RADIUS && Math.abs(p.lng - lng) < RADIUS
     ).length;
   }
 
-  // Fuzzy match: handles typos by checking if all chars appear in order
-  function fuzzyMatch(text, query) {
-    const t = text.toLowerCase();
-    const q = query.toLowerCase();
-    // First try direct includes (best match)
-    if (t.includes(q)) return 2;
-    // Then try word-start matching (e.g. "kor" matches "Koramangala")
-    const words = t.split(/\s+/);
-    if (words.some(w => w.startsWith(q))) return 1.5;
-    // Then try fuzzy: all chars in order
-    let ti = 0;
-    for (let qi = 0; qi < q.length; qi++) {
-      while (ti < t.length && t[ti] !== q[qi]) ti++;
-      if (ti >= t.length) return 0;
-      ti++;
+  // Get bounding box for current city (for biasing search results)
+  function getCityBounds() {
+    const city = DataStore.getCityData();
+    if (!city) return null;
+    const [lat, lng] = city.center;
+    // ~30km radius around city center
+    const d = 0.3;
+    return [lng - d, lat - d, lng + d, lat + d]; // [west, south, east, north]
+  }
+
+  // Clean up Nominatim display name to show just the relevant part
+  function cleanDisplayName(displayName, cityName) {
+    const parts = displayName.split(',').map(p => p.trim());
+    // Take first 2-3 parts, skip country/state-level info
+    const clean = parts.slice(0, 3).join(', ');
+    return clean;
+  }
+
+  async function geocodeSearch(query) {
+    const city = DataStore.getCityData();
+    const cityName = city ? city.name : '';
+    const bounds = getCityBounds();
+
+    // Build Nominatim URL
+    let url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query + ' ' + cityName)}&limit=8&addressdetails=1`;
+    if (bounds) {
+      url += `&viewbox=${bounds.join(',')}&bounded=1`;
     }
-    return 1;
+
+    // Abort previous request
+    if (abortController) abortController.abort();
+    abortController = new AbortController();
+
+    try {
+      const res = await fetch(url, {
+        signal: abortController.signal,
+        headers: { 'Accept-Language': 'en' },
+      });
+      if (!res.ok) return [];
+      const data = await res.json();
+      return data.map(r => ({
+        name: r.display_name.split(',')[0].trim(),
+        fullName: cleanDisplayName(r.display_name, cityName),
+        lat: parseFloat(r.lat),
+        lng: parseFloat(r.lon),
+      }));
+    } catch (e) {
+      if (e.name === 'AbortError') return null; // Aborted, ignore
+      console.warn('[Search] Geocode error:', e);
+      return [];
+    }
+  }
+
+  function renderSearchResults(dropdown, results, query) {
+    if (results.length === 0) {
+      dropdown.innerHTML = '<div class="search-empty">No places found</div>';
+      dropdown.classList.remove('hidden');
+      return;
+    }
+
+    dropdown.innerHTML = results.map((r, i) => {
+      const pinCount = countPinsNear(r.lat, r.lng, allPins);
+      const countLabel = pinCount > 0 ? `<span class="search-count">${pinCount} pin${pinCount !== 1 ? 's' : ''}</span>` : '';
+      const subtitle = r.fullName && r.fullName !== r.name ? `<span class="search-subtitle">${r.fullName}</span>` : '';
+      return `<div class="search-item" data-lat="${r.lat}" data-lng="${r.lng}" data-name="${r.name}"><div class="search-name-wrap"><span class="search-name">${r.name}</span>${subtitle}</div>${countLabel}</div>`;
+    }).join('');
+    dropdown.classList.remove('hidden');
+
+    dropdown.querySelectorAll('.search-item').forEach(item => {
+      item.addEventListener('click', () => {
+        const lat = parseFloat(item.dataset.lat);
+        const lng = parseFloat(item.dataset.lng);
+        const name = item.dataset.name;
+        document.getElementById('searchInput').value = name;
+        dropdown.classList.add('hidden');
+        MapManager.flyTo(lat, lng, 15);
+        Toast.show(`Showing ${name}`, 'info');
+      });
+    });
   }
 
   // ---- Search Autocomplete ----
@@ -100,56 +107,24 @@ const Filters = (() => {
     if (!input || !dropdown) return;
 
     input.addEventListener('input', () => {
-      const val = input.value.trim().toLowerCase();
-      if (val.length < 1) {
+      const val = input.value.trim();
+      if (val.length < 2) {
         dropdown.classList.add('hidden');
-        return;
-      }
-      const neighborhoods = DataStore.getNeighborhoods();
-
-      // Check alias first
-      const aliasTarget = ALIASES[val];
-
-      // Score each neighborhood
-      let scored = neighborhoods.map(n => {
-        let score = 0;
-        // Alias match = top priority
-        if (aliasTarget && n.name.toLowerCase() === aliasTarget.toLowerCase()) {
-          score = 10;
-        } else {
-          score = fuzzyMatch(n.name, val);
-        }
-        return { ...n, score };
-      }).filter(n => n.score > 0);
-
-      // Sort by score (highest first), then alphabetically
-      scored.sort((a, b) => b.score - a.score || a.name.localeCompare(b.name));
-      scored = scored.slice(0, 10);
-
-      if (scored.length === 0) {
-        dropdown.innerHTML = '<div class="search-empty">No neighborhoods found</div>';
-        dropdown.classList.remove('hidden');
+        if (searchTimeout) clearTimeout(searchTimeout);
         return;
       }
 
-      dropdown.innerHTML = scored.map((n, i) => {
-        const pinCount = countPinsNear(n, allPins);
-        const countLabel = pinCount > 0 ? `<span class="search-count">${pinCount} pin${pinCount !== 1 ? 's' : ''}</span>` : '';
-        return `<div class="search-item" data-idx="${i}" data-lat="${n.lat}" data-lng="${n.lng}" data-name="${n.name}">${highlightMatch(n.name, aliasTarget ? '' : val)}${countLabel}</div>`;
-      }).join('');
+      // Show loading state
+      dropdown.innerHTML = '<div class="search-empty">Searching...</div>';
       dropdown.classList.remove('hidden');
 
-      dropdown.querySelectorAll('.search-item').forEach(item => {
-        item.addEventListener('click', () => {
-          const lat = parseFloat(item.dataset.lat);
-          const lng = parseFloat(item.dataset.lng);
-          const name = item.dataset.name;
-          input.value = name;
-          dropdown.classList.add('hidden');
-          MapManager.flyTo(lat, lng, 15);
-          Toast.show(`Showing ${name}`, 'info');
-        });
-      });
+      // Debounce: wait 300ms after user stops typing
+      if (searchTimeout) clearTimeout(searchTimeout);
+      searchTimeout = setTimeout(async () => {
+        const results = await geocodeSearch(val);
+        if (results === null) return; // Aborted
+        renderSearchResults(dropdown, results, val);
+      }, 300);
     });
 
     input.addEventListener('focus', () => {

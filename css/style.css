@@ -272,9 +272,25 @@ html, body {
   gap: 8px;
 }
 
-.search-name {
+.search-name-wrap {
   flex: 1;
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.search-name {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.search-subtitle {
+  font-size: 11px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .search-count {
