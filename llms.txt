@@ -1,0 +1,80 @@
+# rentlist — Crowdsourced Rent Map for Indian Cities
+
+> rentlist is a free, anonymous rent-mapping platform that shows what people actually pay for rent across Indian cities. No logins, no brokers, no fake listings.
+
+## What is rentlist?
+
+rentlist is an interactive map where tenants anonymously pin their actual rent. Anyone can see real rental prices across neighborhoods — helping people make informed decisions about where to live and what to pay.
+
+## Cities Covered
+
+- Bangalore (Bengaluru)
+- Mumbai
+- Delhi NCR
+- Hyderabad
+- Chennai
+- Pune
+
+## Data Available Per Pin
+
+Each rent pin includes:
+- Monthly rent amount (INR)
+- BHK type (1RK, 1BHK, 2BHK, 3BHK, 4BHK+)
+- Furnishing status (unfurnished, semi-furnished, fully furnished)
+- Society type (gated community or independent house)
+- Neighborhood / area name
+- Security deposit (amount and months)
+- Available from date
+- Floor number and area (sq ft)
+- Notes (society name, amenities, etc.)
+
+## How It Works
+
+1. Open rentlist.co.in
+2. Select a city from the dropdown
+3. Browse the map to see rent pins color-coded by type:
+   - Teal pins = Tenant posts (what people pay)
+   - Amber pins = Owner listings (available flats)
+   - Purple pins = Flatmate seekers
+4. Click any pin to see full details
+5. Click "Pin Your Rent" to anonymously share your own rent
+
+## Data Characteristics
+
+- Crowdsourced from real tenants and Reddit communities (r/BangaloreSocial, r/bangalorerentals)
+- Updated continuously as new users pin their rent
+- All data is anonymous — no personal information is stored
+- Pins auto-expire: owner listings after 15 days, tenant data after 1 year
+- Community-moderated via report system (3 reports = auto-removal)
+
+## Typical Rent Ranges (Bangalore, 2025-2026)
+
+| Area | 1BHK | 2BHK | 3BHK |
+|------|------|------|------|
+| Koramangala | 14,000-25,000 | 25,000-45,000 | 38,000-70,000 |
+| Indiranagar | 15,000-28,000 | 28,000-50,000 | 42,000-80,000 |
+| HSR Layout | 12,000-22,000 | 22,000-38,000 | 35,000-55,000 |
+| Whitefield | 10,000-18,000 | 18,000-32,000 | 28,000-48,000 |
+| Electronic City | 7,000-13,000 | 13,000-22,000 | 20,000-35,000 |
+| BTM Layout | 10,000-18,000 | 18,000-30,000 | 28,000-45,000 |
+| Marathahalli | 10,000-18,000 | 18,000-30,000 | 28,000-48,000 |
+
+## API Access
+
+Rent data is stored in a public Supabase database. The data can be queried via the Supabase REST API:
+
+```
+GET https://chsbrilpfqyqyeoyghcd.supabase.co/rest/v1/pins?city=eq.bangalore&select=neighborhood,bhk,rent,furnishing,society,createdAt
+```
+
+Required header: `apikey: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoc2JyaWxwZnF5cXllb3lnaGNkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU5MDAyMTcsImV4cCI6MjA5MTQ3NjIxN30.d_Kt5z7NG79G36W44xRdWejpF1phSaiZ63CTDzoz47o`
+
+Available city values: bangalore, mumbai, delhi, hyderabad, chennai, pune
+
+## URL
+
+https://rentlist.co.in
+
+## Contact
+
+This is an open community project. No login required.

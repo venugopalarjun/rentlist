@@ -3,8 +3,88 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>rentlist - Anonymous Rent Mapping</title>
-  <meta name="description" content="Anonymous rent mapping platform for Bangalore. Pin your rent, find flats, discover real rental prices across neighborhoods.">
+  <title>rentlist — Real Rents on a Map | Bangalore, Mumbai, Delhi, Hyderabad, Chennai, Pune</title>
+  <meta name="description" content="See what people actually pay for rent in Indian cities. Anonymous, crowdsourced rent data on an interactive map. Pin your rent, find flats, compare neighborhoods — no brokers, no fake listings.">
+  <meta name="keywords" content="rent bangalore, rent mumbai, rent delhi, rent hyderabad, rent chennai, rent pune, rental prices india, flat rent, 1bhk rent, 2bhk rent, anonymous rent, crowdsourced rent data, rent map india, real rent prices, no broker rental">
+
+  <!-- Canonical -->
+  <link rel="canonical" href="https://rentlist.co.in/">
+
+  <!-- Open Graph (WhatsApp, Facebook, LinkedIn) -->
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://rentlist.co.in/">
+  <meta property="og:title" content="rentlist — See What People Actually Pay for Rent">
+  <meta property="og:description" content="Crowdsourced rent map for Indian cities. Anonymous rent data from real tenants — no brokers, no fake listings. Bangalore, Mumbai, Delhi, Hyderabad, Chennai, Pune.">
+  <meta property="og:site_name" content="rentlist">
+  <meta property="og:locale" content="en_IN">
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="rentlist — Real Rents on a Map">
+  <meta name="twitter:description" content="See what people actually pay for rent. Crowdsourced, anonymous rent data for Bangalore, Mumbai, Delhi & more.">
+
+  <!-- JSON-LD Structured Data -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    "name": "rentlist",
+    "url": "https://rentlist.co.in",
+    "description": "Anonymous, crowdsourced rent mapping platform for Indian cities. See real rental prices on an interactive map.",
+    "applicationCategory": "RealEstateApplication",
+    "operatingSystem": "Web",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "INR"
+    },
+    "areaServed": {
+      "@type": "Country",
+      "name": "India"
+    },
+    "creator": {
+      "@type": "Organization",
+      "name": "rentlist"
+    }
+  }
+  </script>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Dataset",
+    "name": "Indian City Rent Prices — Crowdsourced",
+    "description": "Crowdsourced rental price data across 6 Indian cities (Bangalore, Mumbai, Delhi NCR, Hyderabad, Chennai, Pune). Includes BHK type, rent amount, furnishing status, neighborhood, and society type. Updated continuously by anonymous tenants and owners.",
+    "url": "https://rentlist.co.in",
+    "license": "https://creativecommons.org/licenses/by/4.0/",
+    "temporalCoverage": "2025/..",
+    "spatialCoverage": {
+      "@type": "Place",
+      "name": "India",
+      "geo": {
+        "@type": "GeoShape",
+        "box": "8.0 68.0 37.0 97.0"
+      }
+    },
+    "variableMeasured": [
+      {
+        "@type": "PropertyValue",
+        "name": "Monthly Rent",
+        "unitText": "INR"
+      },
+      {
+        "@type": "PropertyValue",
+        "name": "BHK Type",
+        "description": "1RK, 1BHK, 2BHK, 3BHK, 4BHK+"
+      },
+      {
+        "@type": "PropertyValue",
+        "name": "Furnishing",
+        "description": "Unfurnished, Semi-furnished, Fully furnished"
+      }
+    ],
+    "keywords": ["rent", "rental prices", "India", "Bangalore", "Mumbai", "Delhi", "crowdsourced", "real estate"]
+  }
+  </script>
 
   <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -468,5 +548,41 @@
 
   <!-- Vercel Analytics -->
   <script defer src="/_vercel/insights/script.js"></script>
+
+  <!-- SEO: Crawlable content for search engines (hidden from UI) -->
+  <noscript>
+    <div>
+      <h1>rentlist — Real Rent Prices in Indian Cities</h1>
+      <p>rentlist is a free, anonymous rent mapping platform that shows what people actually pay for rent across Indian cities. Browse real rental data from tenants — no brokers, no fake listings.</p>
+
+      <h2>Bangalore Rent Prices</h2>
+      <p>Find real rent prices in Koramangala, Indiranagar, HSR Layout, Whitefield, Electronic City, Marathahalli, BTM Layout, JP Nagar, Jayanagar, Malleshwaram, Hebbal, Sarjapur Road, Bellandur, Brookefield, AECS Layout, and 70+ more Bangalore neighborhoods. 1BHK rents range from ₹8,000 to ₹25,000. 2BHK rents range from ₹15,000 to ₹50,000. 3BHK rents range from ₹25,000 to ₹80,000.</p>
+
+      <h2>Mumbai Rent Prices</h2>
+      <p>Find real rent prices in Bandra, Andheri, Powai, Lower Parel, Worli, Dadar, Goregaon, Malad, Juhu, Versova, BKC, and more Mumbai neighborhoods.</p>
+
+      <h2>Delhi NCR Rent Prices</h2>
+      <p>Find real rent prices in Greater Kailash, Hauz Khas, Connaught Place, Dwarka, Noida, Saket, Lajpat Nagar, CR Park, Vasant Kunj, RK Puram, and more Delhi neighborhoods.</p>
+
+      <h2>Hyderabad Rent Prices</h2>
+      <p>Find real rent prices in HITEC City, Gachibowli, Madhapur, Kondapur, Jubilee Hills, Banjara Hills, Ameerpet, and more Hyderabad neighborhoods.</p>
+
+      <h2>Chennai Rent Prices</h2>
+      <p>Find real rent prices in OMR, T. Nagar, Adyar, Anna Nagar, Velachery, Tambaram, Porur, and more Chennai neighborhoods.</p>
+
+      <h2>Pune Rent Prices</h2>
+      <p>Find real rent prices in Koregaon Park, Hinjewadi, Viman Nagar, Kothrud, Baner, Wakad, Hadapsar, and more Pune neighborhoods.</p>
+
+      <h2>How It Works</h2>
+      <ol>
+        <li>Select your city</li>
+        <li>Browse the interactive map to see rent pins</li>
+        <li>Click any pin to see BHK, rent, furnishing, deposit, and more</li>
+        <li>Pin your own rent anonymously to help the community</li>
+      </ol>
+
+      <p>Data is crowdsourced from real tenants. All submissions are anonymous. Visit <a href="https://rentlist.co.in">rentlist.co.in</a> to explore.</p>
+    </div>
+  </noscript>
 </body>
 </html>

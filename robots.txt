@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://rentlist.co.in/sitemap.xml
