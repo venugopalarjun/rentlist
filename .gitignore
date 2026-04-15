@@ -1,3 +1,7 @@
 .claude/
 node_modules/
 .DS_Store
+seed-supabase.js
+import-housing.js
+import-housing-retry.js
+import-reddit.js

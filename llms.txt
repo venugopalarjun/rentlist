@@ -59,17 +59,13 @@ Each rent pin includes:
 | BTM Layout | 10,000-18,000 | 18,000-30,000 | 28,000-45,000 |
 | Marathahalli | 10,000-18,000 | 18,000-30,000 | 28,000-48,000 |
 
-## API Access
+## Data Access
 
-Rent data is stored in a public Supabase database. The data can be queried via the Supabase REST API:
+Rent data is publicly viewable on the interactive map at https://rentlist.co.in. Select a city, browse neighborhoods, and click pins to see full details.
 
-```
-GET https://chsbrilpfqyqyeoyghcd.supabase.co/rest/v1/pins?city=eq.bangalore&select=neighborhood,bhk,rent,furnishing,society,createdAt
-```
+Available cities: Bangalore, Mumbai, Delhi NCR, Hyderabad, Chennai, Pune.
 
-Required header: `apikey: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoc2JyaWxwZnF5cXllb3lnaGNkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU5MDAyMTcsImV4cCI6MjA5MTQ3NjIxN30.d_Kt5z7NG79G36W44xRdWejpF1phSaiZ63CTDzoz47o`
-
-Available city values: bangalore, mumbai, delhi, hyderabad, chennai, pune
+For programmatic access or data partnerships, visit the website or open a GitHub issue at https://github.com/venugopalarjun/rentlist.
 
 ## URL
 

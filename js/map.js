@@ -8,6 +8,14 @@ const MapManager = (() => {
   let markers = [];
   let tempMarker = null;
 
+  // Security: escape user input before rendering in HTML
+  function esc(str) {
+    if (!str && str !== 0) return '';
+    const div = document.createElement('div');
+    div.textContent = String(str);
+    return div.innerHTML;
+  }
+
   function getCityCenter() {
     const city = DataStore.getCityData();
     return city ? city.center : [12.9716, 77.5946];
@@ -145,11 +153,11 @@ const MapManager = (() => {
     if (pin.postType === 'flatmate') {
       html += `<div class="popup-flatmate-info">`;
       if (pin.budgetPerPerson) html += `<span>Budget/person: \u20B9${DataStore.formatIndianNumber(pin.budgetPerPerson)}</span>`;
-      if (pin.currentOccupants !== undefined) html += `<span>Current occupants: ${pin.currentOccupants}</span>`;
-      if (pin.genderPref && pin.genderPref !== 'any') html += `<span>Gender pref: ${pin.genderPref}</span>`;
-      if (pin.foodPref && pin.foodPref !== 'any') html += `<span>Food: ${pin.foodPref}</span>`;
+      if (pin.currentOccupants !== undefined) html += `<span>Current occupants: ${esc(pin.currentOccupants)}</span>`;
+      if (pin.genderPref && pin.genderPref !== 'any') html += `<span>Gender pref: ${esc(pin.genderPref)}</span>`;
+      if (pin.foodPref && pin.foodPref !== 'any') html += `<span>Food: ${esc(pin.foodPref)}</span>`;
       if (pin.moveInTimeline) {
-        const tl = { immediately: 'Immediately', '1month': 'Within 1 month', '3months': 'Within 3 months' }[pin.moveInTimeline] || pin.moveInTimeline;
+        const tl = { immediately: 'Immediately', '1month': 'Within 1 month', '3months': 'Within 3 months' }[pin.moveInTimeline] || esc(pin.moveInTimeline);
         html += `<span>Move-in: ${tl}</span>`;
       }
       html += `</div>`;
@@ -157,7 +165,7 @@ const MapManager = (() => {
 
     // Show phone publicly for owner & flatmate
     if ((pin.postType === 'owner' || pin.postType === 'flatmate') && pin.contact) {
-      html += `<div class="popup-contact"><a href="tel:${pin.contact}" style="color:#0F766E;text-decoration:none;font-size:13px;font-weight:500;">\u260E ${pin.contact}</a></div>`;
+      html += `<div class="popup-contact"><a href="tel:${esc(pin.contact)}" style="color:#0F766E;text-decoration:none;font-size:13px;font-weight:500;">\u260E ${esc(pin.contact)}</a></div>`;
     }
 
     // Expiry notice for owner/flatmate
@@ -173,18 +181,19 @@ const MapManager = (() => {
     }
 
     if (pin.notes) {
-      html += `<div class="popup-notes">${pin.notes}</div>`;
+      html += `<div class="popup-notes">${esc(pin.notes)}</div>`;
     }
 
     if (pin.neighborhood) {
-      html += `<div style="font-size:11px;color:#A8A29E;margin-top:4px;">${pin.neighborhood}</div>`;
+      html += `<div style="font-size:11px;color:#A8A29E;margin-top:4px;">${esc(pin.neighborhood)}</div>`;
     }
 
     // Edit/Delete for own pins
     if (isMine) {
+      const safeId = esc(pin.id);
       html += `<div class="popup-actions">`;
-      html += `<button class="popup-btn popup-btn-edit" onclick="Modals.openEditModal('${pin.id}')">Edit</button>`;
-      html += `<button class="popup-btn popup-btn-delete" onclick="MapManager.handleDeletePin('${pin.id}')">Delete</button>`;
+      html += `<button class="popup-btn popup-btn-edit" onclick="Modals.openEditModal('${safeId}')">Edit</button>`;
+      html += `<button class="popup-btn popup-btn-delete" onclick="MapManager.handleDeletePin('${safeId}')">Delete</button>`;
       html += `</div>`;
     }
 
@@ -193,11 +202,12 @@ const MapManager = (() => {
     const shareText = encodeURIComponent(`${bhkLabel} ${typeLabel} at \u20B9${rent}/mo in ${pin.neighborhood || cityName} - Check it out on rentlist!`);
     const shareUrl = encodeURIComponent(`${window.location.origin}${window.location.pathname}?lat=${pin.lat}&lng=${pin.lng}`);
     const alreadyReported = DataStore.hasReported(pin.id);
+    const safeReportId = esc(pin.id);
     html += `<div class="popup-share-row">`;
     html += `<button class="popup-icon-btn" onclick="MapManager.copyPinLink('${pin.lat}','${pin.lng}')" title="Copy link"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></button>`;
     html += `<button class="popup-icon-btn popup-icon-wa" onclick="window.open('https://wa.me/?text=${shareText}%20${shareUrl}','_blank')" title="Share on WhatsApp"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.625.846 5.059 2.284 7.034L.789 23.492l4.625-1.467A11.932 11.932 0 0 0 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.75c-2.17 0-4.207-.676-5.871-1.823l-.42-.281-2.744.87.884-2.682-.309-.452A9.708 9.708 0 0 1 2.25 12c0-5.385 4.365-9.75 9.75-9.75S21.75 6.615 21.75 12s-4.365 9.75-9.75 9.75z"/></svg></button>`;
     if (!isMine) {
-      html += `<button class="popup-icon-btn popup-icon-report ${alreadyReported ? 'reported' : ''}" onclick="MapManager.handleReportPin('${pin.id}')" title="${alreadyReported ? 'Already reported' : 'Report this pin'}" ${alreadyReported ? 'disabled' : ''}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg></button>`;
+      html += `<button class="popup-icon-btn popup-icon-report ${alreadyReported ? 'reported' : ''}" onclick="MapManager.handleReportPin('${safeReportId}')" title="${alreadyReported ? 'Already reported' : 'Report this pin'}" ${alreadyReported ? 'disabled' : ''}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg></button>`;
     }
     html += `</div>`;
 

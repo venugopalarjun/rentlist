@@ -17,7 +17,11 @@ const Toast = (() => {
       warn: '\u26A0',
     };
 
-    toast.innerHTML = `<span style="font-size:16px">${icons[type] || icons.info}</span> ${message}`;
+    const iconSpan = document.createElement('span');
+    iconSpan.style.fontSize = '16px';
+    iconSpan.textContent = icons[type] || icons.info;
+    toast.appendChild(iconSpan);
+    toast.appendChild(document.createTextNode(' ' + message));
     container.appendChild(toast);
 
     setTimeout(() => {
